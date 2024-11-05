@@ -1,0 +1,44 @@
+# Node.js
+node_modules/       # Ignora todas las dependencias de Node.js
+npm-debug.log*      # Ignora los archivos de registro de npm
+yarn-debug.log*
+yarn-error.log*
+
+# Directorio de dependencias (por si usas yarn)
+.pnpm-debug.log*
+
+# Terraform
+*.tfstate           # Ignora archivos de estado de Terraform
+*.tfstate.*         # Ignora archivos de estado de Terraform (versionados)
+.terraform/         # Ignora el directorio de plugins y caché de Terraform
+terraform.tfvars    # Ignora archivo con variables sensibles
+terraform.tfvars.json # Ignora archivo JSON con variables sensibles
+*.tfvars            # Ignora cualquier archivo .tfvars (puede contener credenciales)
+
+# Archivos de respaldo y configuración del sistema operativo
+*.swp               # Ignora archivos de intercambio de editor Vim
+*.swo
+.DS_Store           # Ignora el archivo del sistema macOS
+Thumbs.db           # Ignora archivos de caché de imágenes de Windows
+
+# Git
+.gitignore          # Ignora el propio archivo .gitignore
+
+
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+
+# Ignorar la carpeta .terraform completa y archivos de estado
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/.terraform.lock.hcl
+terraform-provider-aws_v5.74.0_x5.exe
+infra/terraform-provider-aws_v5.74.0_x5.exe
+
+# Ignorar node_modules
+node_modules/
+terraform.tfvars
