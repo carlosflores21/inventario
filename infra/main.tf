@@ -1,35 +1,64 @@
-# Definición de Variables
-variable "aws_access_key" {
-  description = "AWS Access Key"
-  type        = string
-}
+name: Deploy Application
 
-variable "aws_secret_key" {
-  description = "AWS Secret Key"
-  type        = string
-}
+on:
+  push:
+    branches:
+      - main
 
-variable "aws_region" {
-  description = "AWS Region"
-  type        = string
-  default     = "us-east-1"
-}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-# Configuración del Proveedor
-provider "aws" {
-  region     = var.aws_region
-  access_key = var.aws_access_key
-  secret_key = var.aws_secret_key
-}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v2
 
-# Recurso de ejemplo: Crear una instancia EC2
-resource "aws_instance" "app_server" {
-  ami           = "ami-0c8f6dd3e17cd14c2"   # Reemplaza con el ID de la AMI que prefieras
-  instance_type = "t2.micro"       # Tipo de instancia para el servidor
-  subnet_id     = "subnet-03d7ff0baf5d9f8da" # Reemplaza con el ID de la Subred donde se creará la instancia
-  associate_public_ip_address = true   
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          # Crear el directorio .ssh si no existe
+          mkdir -p ~/.ssh
+          # Guardar la clave SSH en un archivo
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          # Asegurarse de que la clave tenga los permisos correctos
+          chmod 600 ~/.ssh/id_rsa
+          # Agregar el host a known_hosts para evitar advertencias en la conexión
+          ssh-keyscan -H "44.221.46.187" >> ~/.ssh/known_hosts
 
-  tags = {
-    Name = "LibreriaAppServer"
-  }
-}
+      - name: Deploy to EC2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          EC2_HOST: "ubuntu@44.221.46.187"
+        run: |
+          ssh $EC2_HOST << 'EOF'
+            # Navegar al directorio de la aplicación o clonar el repositorio si no existe
+            if [ ! -d "inventario" ]; then
+              git clone https://github.com/carlosflores21/inventario.git inventario
+            fi
+            cd inventario
+
+            # Actualizar el código desde el repositorio
+            git pull origin main
+
+            # Instalar Node.js y npm si no están instalados
+            if ! command -v node &> /dev/null; then
+              curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+              sudo apt-get install -y nodejs
+            fi
+
+            # Instalar dependencias de la aplicación
+            npm install
+
+            # Instalar pm2 si no está instalado para mantener la aplicación corriendo
+            if ! command -v pm2 &> /dev/null; then
+              sudo npm install -g pm2
+            fi
+
+            # Iniciar o reiniciar la aplicación usando pm2 con el nombre "inventario"
+            pm2 start index.js --name "inventario" || pm2 restart "inventario"
+            
+            # Guardar la configuración de pm2 para reinicios futuros
+            pm2 save
+          EOF
